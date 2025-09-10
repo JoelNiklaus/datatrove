@@ -52,7 +52,16 @@ class VLLMServer(InferenceServer):
             model_kwargs["pipeline-parallel-size"] = self.config.pp
         # set kwargs
         if model_kwargs:
-            cmd.extend([f"--{k}={v}" for k, v in model_kwargs.items()])
+            for k, v in model_kwargs.items():
+                # Handle boolean values (including string representations)
+                if isinstance(v, bool) or (isinstance(v, str) and v.lower() in ['true', 'false']):
+                    is_true = v if isinstance(v, bool) else v.lower() == 'true'
+                    if is_true:
+                        cmd.append(f"--{k}")
+                    else:
+                        cmd.append(f"--no-{k}")
+                else:
+                    cmd.extend([f"--{k}", str(v)])
 
         self.server_process = await asyncio.create_subprocess_exec(
             *cmd,
